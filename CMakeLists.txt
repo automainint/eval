@@ -14,7 +14,7 @@ endif()
 project(
   ${EVAL_PROJECT}
   VERSION 0.1.1
-  DESCRIPTION "Peer"
+  DESCRIPTION "Eval"
   LANGUAGES C)
 
 include(FetchContent)
