@@ -39,7 +39,7 @@ target_compile_features(${EVAL_LIBRARY} PUBLIC c_std_11)
 target_link_libraries(${EVAL_LIBRARY} PUBLIC kit::kit)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-  target_compile_options(${EVAL_LIBRARY} PUBLIC -pedantic -Wall -Werror)
+  #target_compile_options(${EVAL_LIBRARY} PUBLIC -pedantic -Wall -Werror)
 endif()
 
 enable_testing()
