@@ -26,7 +26,7 @@ enable_testing()
 
 add_test(
   NAME eval_integration_find_package_run
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/install/${CMAKE_INSTALL_BINDIR}/${NAME}${CMAKE_EXECUTABLE_SUFFIX})
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/install/${CMAKE_INSTALL_BINDIR}/eval_integration_find_package${CMAKE_EXECUTABLE_SUFFIX})
 
 set_tests_properties(
   eval_integration_find_package_run
