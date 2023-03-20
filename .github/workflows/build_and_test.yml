@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Build
         shell: bash
@@ -44,38 +44,16 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: Set up CMake 3.18
-        uses: jwlawson/actions-setup-cmake@v1.8
-        with:
-          cmake-version: 3.18
-
-      - name: Install GCC 11
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt install gcc-11 g++-11
-
-      - name: Build with GCC 11
-        if: runner.os != 'Windows'
+      - name: Build
+        shell: bash
+        working-directory: ./source/test/integration/${{ matrix.name }}
         run: |
           cmake -D CMAKE_BUILD_TYPE=$BUILD_TYPE -B build -S .
           cmake --build build --config $BUILD_TYPE
-        working-directory: ./source/test/integration/${{ matrix.name }}
-        env:
-          CC: gcc-11
-          CXX: g++-11
-
-      - name: Build with Visual Studio
-        if: runner.os == 'Windows'
+      - name: Run tests
         shell: bash
-        run: |
-          cmake -D CMAKE_BUILD_TYPE=$BUILD_TYPE -B build -S .
-          cmake --build build --config $BUILD_TYPE
-        working-directory: ./source/test/integration/${{ matrix.name }}
-
-      - name: Run
-        shell: bash
-        run:
-          ctest -V -C $BUILD_TYPE
         working-directory: ./source/test/integration/${{ matrix.name }}/build
+        run: |
+          ctest -V -C $BUILD_TYPE
