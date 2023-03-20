@@ -1,18 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
 
-option(EVAL_ENABLE_TESTING "Enable testing" ON)
-
-set(EVAL_PROJECT eval)
-set(EVAL_LIBRARY eval)
-set(EVAL_TEST eval_test)
-set(EVAL_TARGETS eval-targets)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE)
 
 if(NOT DEFINED CMAKE_BUILD_PARALLEL_LEVEL)
   set(CMAKE_BUILD_PARALLEL_LEVEL 4)
 endif()
 
+option(EVAL_ENABLE_TESTING "Enable testing" ON)
+
 project(
-  ${EVAL_PROJECT}
+  eval
   VERSION 0.1.1
   DESCRIPTION "Eval"
   LANGUAGES C)
@@ -30,16 +27,15 @@ if(NOT kit_FOUND)
   FetchContent_MakeAvailable(kit)
 endif()
 
-add_library(${EVAL_LIBRARY} STATIC)
-add_library(${EVAL_PROJECT}::${EVAL_LIBRARY} ALIAS ${EVAL_LIBRARY})
+add_library(eval STATIC)
+add_library(eval::eval ALIAS eval)
 target_include_directories(
-  ${EVAL_LIBRARY} INTERFACE
+  eval INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/source>)
-target_compile_features(${EVAL_LIBRARY} PUBLIC c_std_11)
-target_link_libraries(${EVAL_LIBRARY} PUBLIC kit::kit)
+target_link_libraries(eval PUBLIC kit::kit)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-  #target_compile_options(${EVAL_LIBRARY} PUBLIC -pedantic -Wall -Werror)
+  target_compile_options(eval PUBLIC -pedantic -Wall -Werror)
 endif()
 
 enable_testing()
@@ -47,28 +43,28 @@ enable_testing()
 if(EVAL_ENABLE_TESTING)
   find_package(Threads REQUIRED)
 
-  add_executable(${EVAL_TEST})
-  add_executable(${EVAL_PROJECT}::${EVAL_TEST} ALIAS ${EVAL_TEST})
-  target_compile_features(${EVAL_TEST} PRIVATE c_std_11)
-  target_link_libraries(${EVAL_TEST} PRIVATE ${EVAL_LIBRARY} kit::kit_test)
+  add_executable(eval_test_suite)
+  add_executable(eval::eval_test_suite ALIAS eval_test_suite)
+  target_compile_features(eval_test_suite PRIVATE c_std_11)
+  target_link_libraries(eval_test_suite PRIVATE eval kit::kit_test)
 
   if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(
-      ${EVAL_LIBRARY} PUBLIC
+      eval PUBLIC
       -fsanitize=undefined,address
       --coverage -O0 -g)
     target_link_options(
-      ${EVAL_LIBRARY} PUBLIC
+      eval PUBLIC
       -fsanitize=undefined,address
       --coverage)
   endif()
 
   add_test(
-    NAME ${EVAL_LIBRARY}_unittests
-    COMMAND ${EVAL_TEST} --no-carriage-return)
+    NAME eval_unittests
+    COMMAND eval_test_suite --no-carriage-return)
 
   set_tests_properties(
-    ${EVAL_LIBRARY}_unittests
+    eval_unittests
     PROPERTIES
     TIMEOUT "120")
 endif()
@@ -95,21 +91,21 @@ unset(path_)
 unset(dir_)
 
 install(
-  TARGETS ${EVAL_LIBRARY} ${EVAL_TEST_LIBRARY}
-  EXPORT ${EVAL_TARGETS}
+  TARGETS eval eval_test_suite
+  EXPORT eval-targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(
-  EXPORT ${EVAL_TARGETS}
-  FILE ${EVAL_TARGETS}.cmake
+  EXPORT eval-targets
+  FILE eval-targets.cmake
   NAMESPACE ${PROJECT_NAME}::
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 export(
-  EXPORT ${EVAL_TARGETS}
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/${EVAL_TARGETS}.cmake"
+  EXPORT eval-targets
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/eval-targets.cmake"
   NAMESPACE ${PROJECT_NAME}::)
 
 include(CMakePackageConfigHelpers)

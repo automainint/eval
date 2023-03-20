@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <kit/status.h>
+
 #ifdef __cplusplus
 }
 #endif

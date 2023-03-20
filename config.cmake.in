@@ -3,4 +3,4 @@
 include(CMakeFindDependencyMacro)
 find_dependency(kit)
 
-include("${CMAKE_CURRENT_LIST_DIR}/@EVAL_TARGETS@.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/eval-targets.cmake")

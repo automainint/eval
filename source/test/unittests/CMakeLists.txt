@@ -1,4 +1,4 @@
 target_sources(
-  ${EVAL_TEST}
+  eval_test_suite
     PRIVATE
       main.test.c)

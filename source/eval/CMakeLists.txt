@@ -1,5 +1,5 @@
 target_sources(
-  ${EVAL_LIBRARY}
+  eval
     PRIVATE
       eval.c
     PUBLIC
