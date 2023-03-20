@@ -91,7 +91,7 @@ unset(path_)
 unset(dir_)
 
 install(
-  TARGETS eval eval_test_suite
+  TARGETS eval
   EXPORT eval-targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
