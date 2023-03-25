@@ -1,18 +1,11 @@
 #ifndef EVAL_ARITHMETIC_H
 #define EVAL_ARITHMETIC_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "options.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef int64_t eval_integer_t;
-
-#define EVAL_MAX INT64_MAX
-#define EVAL_MIN -INT64_MAX
-#define EVAL_MUL_SAFETY 0xb504f333ll
 
 #define EVAL_ADD(x, y) \
   ((eval_integer_t) (((uint64_t) x) + ((uint64_t) y)))
@@ -30,6 +23,32 @@ typedef int64_t eval_integer_t;
 #  pragma GCC            push_options
 #  pragma GCC            optimize("O3")
 #endif
+
+static eval_integer_t eval_abs(eval_integer_t const x) {
+  return x < 0 ? -x : x;
+}
+
+static eval_integer_t eval_min(eval_integer_t const x,
+                               eval_integer_t const y) {
+  return x < y ? x : y;
+}
+
+static eval_integer_t eval_max(eval_integer_t const x,
+                               eval_integer_t const y) {
+  return x < y ? y : x;
+}
+
+static eval_integer_t eval_min3(eval_integer_t const x,
+                                eval_integer_t const y,
+                                eval_integer_t const z) {
+  return eval_min(eval_min(x, y), z);
+}
+
+static eval_integer_t eval_max3(eval_integer_t const x,
+                                eval_integer_t const y,
+                                eval_integer_t const z) {
+  return eval_max(eval_max(x, y), z);
+}
 
 static eval_integer_t eval_neg(eval_integer_t const x) {
   if (x <= EVAL_MIN)
@@ -55,15 +74,37 @@ static eval_integer_t eval_sub(eval_integer_t const x,
   return x - y;
 }
 
-static eval_integer_t eval_idiv(eval_integer_t const x,
-                                eval_integer_t const y) {
-  if (y != 0)
-    return x / y;
-  if (x < 0)
-    return EVAL_MIN;
-  if (x > 0)
-    return EVAL_MAX;
-  return 1;
+static eval_integer_t eval_add3(eval_integer_t const x,
+                                eval_integer_t const y,
+                                eval_integer_t const z) {
+  int xy_overflow = (y > 0 && x >= EVAL_MAX - y) ||
+                    (y < 0 && x <= EVAL_MIN - y);
+  int yz_overflow = (z > 0 && y >= EVAL_MAX - z) ||
+                    (z < 0 && y <= EVAL_MIN - z);
+  int xz_overflow = (z > 0 && x >= EVAL_MAX - z) ||
+                    (z < 0 && x <= EVAL_MIN - z);
+  if (xy_overflow && xz_overflow)
+    return eval_add(eval_add(y, z), x);
+  if (xy_overflow && yz_overflow)
+    return eval_add(eval_add(z, x), y);
+  return eval_add(eval_add(x, y), z);
+}
+
+static eval_integer_t eval_idiv(eval_integer_t const x_,
+                                eval_integer_t const y_) {
+  eval_integer_t const x = x_ < 0 ? -x_ : x_;
+  eval_integer_t const y = y_ < 0 ? -y_ : y_;
+  eval_integer_t       z;
+
+  if (y == 0) {
+    if (x == 0)
+      z = 0;
+    else
+      z = EVAL_MAX;
+  } else
+    z = eval_add(x, y / 2) / y;
+
+  return (x_ < 0) ^ (y_ < 0) ? -z : z;
 }
 
 static eval_integer_t eval_imul(eval_integer_t const x,
@@ -95,35 +136,52 @@ static eval_integer_t eval_imul(eval_integer_t const x,
   return x * y;
 }
 
-static eval_integer_t eval_div(eval_integer_t const x,
-                               eval_integer_t const y,
-                               eval_integer_t const scale) {
+static eval_integer_t eval_div(eval_integer_t const x_,
+                               eval_integer_t const y_,
+                               eval_integer_t const scale_) {
   //  x / y = eval_div(x, y, scale) / scale
-  //  eval_div(x, y, scale) = x * scale / y
-  if (y == 0) {
-    if (x > 0)
+  //  eval_div(x, y, scale) = (x / y) * scale
+
+  if (scale_ == 0)
+    return 0;
+
+  if (y_ == 0) {
+    if (x_ > 0)
       return EVAL_MAX;
-    if (x < 0)
+    if (x_ < 0)
       return EVAL_MIN;
-    return scale;
+    return scale_;
   }
 
-  if (scale < 0)
-    return -eval_div(x, y, -scale);
-  if (y < 0)
-    return -eval_div(x, -y, scale);
+  eval_integer_t const x     = x_ < 0 ? -x_ : x_;
+  eval_integer_t const y     = y_ < 0 ? -y_ : y_;
+  eval_integer_t const scale = scale_ < 0 ? -scale_ : scale_;
 
-  eval_integer_t const half_y = y / 2;
+  eval_integer_t z;
 
-  if (x < 0) {
-    if (x < EVAL_MIN / scale)
-      return eval_imul(eval_idiv(eval_sub(x, half_y), y), scale);
-    return eval_idiv(eval_sub(eval_imul(x, scale), half_y), y);
+  if (x < EVAL_MAX / scale)
+    //  (x * scale) / y
+    z = eval_idiv(eval_imul(x, scale), y);
+  else {
+    eval_integer_t const x_div_y     = eval_idiv(x, y);
+    eval_integer_t const y_div_scale = eval_idiv(y, scale);
+
+    eval_integer_t loss_x, loss_y;
+
+    if (scale < y) {
+      loss_x = eval_abs(x - eval_imul(x_div_y, y));
+      loss_y = eval_abs(y - eval_imul(y_div_scale, scale));
+    }
+
+    if (scale < y && loss_y < loss_x)
+      //  x / (y / scale)
+      z = eval_idiv(x, y_div_scale);
+    else
+      //  (x / y) * scale
+      z = eval_imul(x_div_y, scale);
   }
 
-  if (x > EVAL_MAX / scale)
-    return eval_imul(eval_idiv(eval_add(x, half_y), y), scale);
-  return eval_idiv(eval_add(eval_imul(x, scale), half_y), y);
+  return (scale_ < 0) ^ (y_ < 0) ^ (x_ < 0) ? -z : z;
 }
 
 static eval_integer_t eval_mul(eval_integer_t const x,
@@ -151,10 +209,34 @@ static eval_integer_t eval_div_sum3(eval_integer_t const x,
   eval_integer_t const sum_x_y = eval_add(x, y);
   if ((z < 0 && sum_x_y <= EVAL_MIN - z) ||
       (z > 0 && sum_x_y >= EVAL_MAX - z))
-    return eval_add(
-        eval_add(eval_idiv(x, divisor), eval_idiv(y, divisor)),
-        eval_idiv(z, divisor));
+    return eval_add3(eval_idiv(x, divisor), eval_idiv(y, divisor),
+                     eval_idiv(z, divisor));
   return eval_idiv(eval_add(sum_x_y, z), divisor);
+}
+
+static eval_integer_t eval_wrap(eval_integer_t const x,
+                                eval_integer_t const x_min,
+                                eval_integer_t const x_range) {
+  if (x_range <= 0)
+    return x_min;
+
+  eval_integer_t const distance = x - x_min;
+  eval_integer_t       repeats  = 0;
+
+  if (distance < 0)
+    repeats = (distance - x_range + 1) / x_range;
+  else if (distance >= x_range)
+    repeats = distance / x_range;
+
+  return x - repeats * x_range;
+}
+
+static eval_integer_t eval_lerp(eval_integer_t const x0,
+                                eval_integer_t const x1,
+                                eval_integer_t const t,
+                                eval_integer_t const scale) {
+  //  x = x0 + (x1 - x0) * scale / t
+  return eval_add(x0, eval_div(eval_sub(x1, x0), t, scale));
 }
 
 #ifdef __GNUC__

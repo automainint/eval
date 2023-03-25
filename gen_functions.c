@@ -19,8 +19,8 @@ void print_func(FILE *out, long double (*const func)(long double),
                 long double const x0, long double const x1,
                 char const *const name) {
   fprintf(out, "static long long const eval_data_%s[%" PRId64 "] = {",
-          name, range - left - right);
-  for (int64_t i = left, k = 0; i < range - right; i++, k++) {
+          name, range + 1 - left - right);
+  for (int64_t i = left, k = 0; i <= range - right; i++, k++) {
     long double x = x0 + (((long double) i) * (x1 - x0)) /
                              ((long double) range);
     long double y = func(x);
@@ -40,6 +40,14 @@ int main(int argc, char **argv) {
   FILE *f = fopen("source/eval/data.inl.h", "w");
   fprintf(f, "#define EVAL_SCALE %" PRId64 "\n", scale);
   fprintf(f, "#define EVAL_RANGE %" PRId64 "\n\n", range);
+  fprintf(f, "#define EVAL_SQRT_RANGE eval_imul(10, scale)\n");
+  fprintf(f, "#define EVAL_LOG_RANGE  eval_imul(10, scale)\n");
+  fprintf(f, "#define EVAL_EXP_MIN    eval_imul(-10, scale)\n");
+  fprintf(f, "#define EVAL_EXP_RANGE  eval_imul(20, scale)\n");
+  fprintf(f, "#define EVAL_SIN_RANGE  eval_pi(scale)\n");
+  fprintf(f, "#define EVAL_TAN_RANGE  eval_pi_2(scale)\n");
+  fprintf(f, "#define EVAL_ASIN_RANGE scale\n");
+  fprintf(f, "#define EVAL_ATAN_RANGE eval_imul(10, scale)\n\n");
   print_func(f, sqrtl, 0, 0, 0.0, 10.0, "sqrt");
   print_func(f, logl, 1, 0, 0.0, 10.0, "log");
   print_func(f, expl, 0, 0, -10.0, 10.0, "exp");

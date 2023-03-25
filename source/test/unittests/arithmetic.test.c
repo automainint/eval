@@ -45,6 +45,15 @@ TEST("arithmetic sub") {
   REQUIRE(eval_sub(-max_ / 2, 1 + max_ / 2) == EVAL_MIN);
 }
 
+TEST("arithmetic wrap") {
+  REQUIRE(eval_wrap(5, 5, 10) == 5);
+  REQUIRE(eval_wrap(14, 5, 10) == 14);
+  REQUIRE(eval_wrap(15, 5, 10) == 5);
+  REQUIRE(eval_wrap(4, 5, 10) == 14);
+  REQUIRE(eval_wrap(-5, 5, 10) == 5);
+  REQUIRE(eval_wrap(-6, 5, 10) == 14);
+}
+
 /*  FIXME
  *  Add more tests.
  */

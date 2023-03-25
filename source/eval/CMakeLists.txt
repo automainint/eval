@@ -4,4 +4,6 @@ target_sources(
       functions.c
     PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/arithmetic.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/functions.h>)
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/functions.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/data.inl.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/options.h>)
