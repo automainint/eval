@@ -64,7 +64,10 @@ eval_integer_t eval_4_e(eval_integer_t scale) {
                   scale);
 }
 
-/*  Basic functions.
+/*  BASIC FUNCTIONS
+ *
+ *  Trigonometric and logarithmic functions defined by arrays with
+ *  function values.
  */
 
 static eval_integer_t eval_sqrt_fetch(eval_integer_t n,
@@ -78,7 +81,7 @@ static eval_integer_t eval_sqrt_fetch(eval_integer_t n,
   assert(n < sizeof eval_data_sqrt / sizeof *eval_data_sqrt);
 
   eval_integer_t const z = eval_data_sqrt[n];
-  return eval_div(z, scale, EVAL_SCALE);
+  return eval_div(z, EVAL_SCALE, scale);
 }
 
 static eval_integer_t eval_log_fetch(eval_integer_t n,
@@ -92,7 +95,7 @@ static eval_integer_t eval_log_fetch(eval_integer_t n,
   assert(n <= sizeof eval_data_log / sizeof *eval_data_log);
 
   eval_integer_t const z = eval_data_log[n - 1];
-  return eval_div(z, scale, EVAL_SCALE);
+  return eval_div(z, EVAL_SCALE, scale);
 }
 
 static eval_integer_t eval_exp_fetch(eval_integer_t n,
@@ -106,7 +109,7 @@ static eval_integer_t eval_exp_fetch(eval_integer_t n,
   assert(n < sizeof eval_data_exp / sizeof *eval_data_exp);
 
   eval_integer_t const z = eval_data_exp[n];
-  return eval_div(z, scale, EVAL_SCALE);
+  return eval_div(z, EVAL_SCALE, scale);
 }
 
 static eval_integer_t eval_sin_fetch(eval_integer_t n,
@@ -117,7 +120,7 @@ static eval_integer_t eval_sin_fetch(eval_integer_t n,
   eval_integer_t const z = n < 0 ? -eval_data_sin[-n]
                                  : eval_data_sin[n];
 
-  return eval_div(z, scale, EVAL_SCALE);
+  return eval_div(z, EVAL_SCALE, scale);
 }
 
 static eval_integer_t eval_tan_fetch(eval_integer_t n,
@@ -132,7 +135,7 @@ static eval_integer_t eval_tan_fetch(eval_integer_t n,
   eval_integer_t const z = n < 0 ? -eval_data_tan[-n]
                                  : eval_data_tan[n];
 
-  return eval_div(z, scale, EVAL_SCALE);
+  return eval_div(z, EVAL_SCALE, scale);
 }
 
 static eval_integer_t eval_asin_fetch(eval_integer_t n,
@@ -148,7 +151,7 @@ static eval_integer_t eval_asin_fetch(eval_integer_t n,
   eval_integer_t const z = n < 0 ? -eval_data_asin[-n]
                                  : eval_data_asin[n];
 
-  return eval_div(z, scale, EVAL_SCALE);
+  return eval_div(z, EVAL_SCALE, scale);
 }
 
 static eval_integer_t eval_atan_fetch(eval_integer_t n,
@@ -164,7 +167,7 @@ static eval_integer_t eval_atan_fetch(eval_integer_t n,
   eval_integer_t const z = n < 0 ? -eval_data_atan[-n]
                                  : eval_data_atan[n];
 
-  return eval_div(z, scale, EVAL_SCALE);
+  return eval_div(z, EVAL_SCALE, scale);
 }
 
 /*  TODO
@@ -174,9 +177,31 @@ static eval_integer_t eval_atan_fetch(eval_integer_t n,
 eval_integer_t eval_sqrt(eval_integer_t x, eval_integer_t scale) {
   eval_integer_t const x_range = EVAL_SQRT_RANGE;
 
-  eval_integer_t const n = eval_div(x, x_range, EVAL_RANGE);
+  eval_integer_t n0, n1, x0, x1;
 
-  return eval_sqrt_fetch(n, scale);
+  n0 = eval_div(x, x_range, EVAL_RANGE);
+  x0 = eval_div(n0, EVAL_RANGE, x_range);
+
+  if (x0 == x)
+    return eval_sqrt_fetch(n0, scale);
+
+  if (x0 < x) {
+    n1 = n0 + 1;
+    x1 = eval_div(n1, EVAL_RANGE, x_range);
+  } else {
+    n1 = n0;
+    x1 = x0;
+    n0 = n1 - 1;
+    x0 = eval_div(n0, EVAL_RANGE, x_range);
+  }
+
+  if (x1 <= x0)
+    return eval_sqrt_fetch(n0, scale);
+
+  eval_integer_t const z0 = eval_sqrt_fetch(n0, scale);
+  eval_integer_t const z1 = eval_sqrt_fetch(n1, scale);
+
+  return eval_lerp(z0, z1, x - x0, x1 - x0);
 }
 
 eval_integer_t eval_log(eval_integer_t x, eval_integer_t scale) {
@@ -232,7 +257,10 @@ eval_integer_t eval_atan(eval_integer_t x, eval_integer_t scale) {
   return eval_atan_fetch(n, scale);
 }
 
-/*  Compound functions.
+/*  COMPOUND FUNCTIONS
+ *
+ *  Functions defined by compositions of basic functions and
+ *  arithmetic operations.
  */
 
 eval_integer_t eval_pow(eval_integer_t x, eval_integer_t y,

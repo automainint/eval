@@ -243,8 +243,10 @@ static eval_integer_t eval_lerp(eval_integer_t const x0,
                                 eval_integer_t const x1,
                                 eval_integer_t const t,
                                 eval_integer_t const scale) {
-  //  x = x0 + (x1 - x0) * scale / t
-  return eval_add(x0, eval_div(eval_sub(x1, x0), t, scale));
+  if (scale == 0)
+    return x0;
+  //  x = x0 + (x1 - x0) * t / scale
+  return eval_add(x0, eval_div(eval_sub(x1, x0), scale, t));
 }
 
 #ifdef __GNUC__
