@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
   FILE *f = fopen("source/eval/data.inl.h", "w");
   fprintf(f, "#define EVAL_SCALE %" PRId64 "\n", scale);
   fprintf(f, "#define EVAL_RANGE %" PRId64 "\n\n", range);
+  print_func(f, sqrtl, 0, 0, 0.0, 10.0, "sqrt");
   print_func(f, logl, 1, 0, 0.0, 10.0, "log");
   print_func(f, expl, 0, 0, -10.0, 10.0, "exp");
   print_func(f, sinl, 0, 0, 0.0, M_PI, "sin");
