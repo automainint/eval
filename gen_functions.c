@@ -44,14 +44,14 @@ int main(int argc, char **argv) {
   fprintf(f, "#define EVAL_LOG_RANGE  eval_imul(10, scale)\n");
   fprintf(f, "#define EVAL_EXP_MIN    eval_imul(-10, scale)\n");
   fprintf(f, "#define EVAL_EXP_RANGE  eval_imul(20, scale)\n");
-  fprintf(f, "#define EVAL_SIN_RANGE  eval_pi(scale)\n");
+  fprintf(f, "#define EVAL_SIN_RANGE  eval_pi_2(scale)\n");
   fprintf(f, "#define EVAL_TAN_RANGE  eval_pi_2(scale)\n");
   fprintf(f, "#define EVAL_ASIN_RANGE scale\n");
   fprintf(f, "#define EVAL_ATAN_RANGE eval_imul(10, scale)\n\n");
   print_func(f, sqrtl, 0, 0, 0.0, 10.0, "sqrt");
   print_func(f, logl, 1, 0, 0.0, 10.0, "log");
   print_func(f, expl, 0, 0, -10.0, 10.0, "exp");
-  print_func(f, sinl, 0, 0, 0.0, M_PI, "sin");
+  print_func(f, sinl, 0, 1, 0.0, M_PI / 2, "sin");
   print_func(f, tanl, 0, 1, 0.0, M_PI / 2, "tan");
   print_func(f, asinl, 0, 0, 0.0, 1.0, "asin");
   print_func(f, atanl, 0, 0, 0.0, 10.0, "atan");

@@ -215,10 +215,18 @@ static eval_integer_t eval_div_sum3(eval_integer_t const x,
 }
 
 static eval_integer_t eval_wrap(eval_integer_t const x,
-                                eval_integer_t const x_min,
-                                eval_integer_t const x_range) {
-  if (x_range <= 0)
-    return x_min;
+                                eval_integer_t const x_min_,
+                                eval_integer_t const x_range_) {
+  eval_integer_t x_min   = x_min_;
+  eval_integer_t x_range = x_range_;
+
+  if (x_range_ == 0)
+    return x_min_;
+
+  if (x_range_ < 0) {
+    x_min   = x_min_ + x_range_;
+    x_range = -x_range_;
+  }
 
   eval_integer_t const distance = x - x_min;
   eval_integer_t       repeats  = 0;
