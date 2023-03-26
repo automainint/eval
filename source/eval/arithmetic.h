@@ -7,14 +7,19 @@
 extern "C" {
 #endif
 
-#define EVAL_ADD(x, y) \
-  ((eval_integer_t) (((uint64_t) x) + ((uint64_t) y)))
-#define EVAL_SUB(x, y) \
-  ((eval_integer_t) (((uint64_t) x) - ((uint64_t) y)))
-#define EVAL_MUL(x, y) \
-  ((eval_integer_t) (((uint64_t) x) * ((uint64_t) y)))
-#define EVAL_DIV(x, y) \
-  (y == 0 ? 0 : ((eval_integer_t) (((uint64_t) x) / ((uint64_t) y))))
+#define EVAL_ADD(x, y)                          \
+  ((eval_integer_t) (((unsigned long long) x) + \
+                     ((unsigned long long) y)))
+#define EVAL_SUB(x, y)                          \
+  ((eval_integer_t) (((unsigned long long) x) - \
+                     ((unsigned long long) y)))
+#define EVAL_MUL(x, y)                          \
+  ((eval_integer_t) (((unsigned long long) x) * \
+                     ((unsigned long long) y)))
+#define EVAL_DIV(x, y)                                    \
+  (y == 0 ? 0                                             \
+          : ((eval_integer_t) (((unsigned long long) x) / \
+                               ((unsigned long long) y))))
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic push
@@ -77,12 +82,12 @@ static eval_integer_t eval_sub(eval_integer_t const x,
 static eval_integer_t eval_add3(eval_integer_t const x,
                                 eval_integer_t const y,
                                 eval_integer_t const z) {
-  int xy_overflow = (y > 0 && x >= EVAL_MAX - y) ||
-                    (y < 0 && x <= EVAL_MIN - y);
-  int yz_overflow = (z > 0 && y >= EVAL_MAX - z) ||
-                    (z < 0 && y <= EVAL_MIN - z);
-  int xz_overflow = (z > 0 && x >= EVAL_MAX - z) ||
-                    (z < 0 && x <= EVAL_MIN - z);
+  int xy_overflow = (y > 0 && x > EVAL_MAX - y) ||
+                    (y < 0 && x < EVAL_MIN - y);
+  int yz_overflow = (z > 0 && y > EVAL_MAX - z) ||
+                    (z < 0 && y < EVAL_MIN - z);
+  int xz_overflow = (z > 0 && x > EVAL_MAX - z) ||
+                    (z < 0 && x < EVAL_MIN - z);
   if (xy_overflow && xz_overflow)
     return eval_add(eval_add(y, z), x);
   if (xy_overflow && yz_overflow)
@@ -245,6 +250,16 @@ static eval_integer_t eval_lerp(eval_integer_t const x0,
                                 eval_integer_t const scale) {
   if (scale == 0)
     return x0;
+
+  if ((x0 < 0 && x1 > EVAL_MAX + x0) ||
+      (x0 > 0 && x1 < EVAL_MIN + x0))
+    /*  Subtraction (x1 - x0) will overflow.
+     *  Use different order of operations.
+     */
+    //  x = x0 + (x1 * t / scale) + (-x0 * t / scale)
+    return eval_add3(x0, eval_mul(x1, t, scale),
+                     eval_neg(eval_mul(x0, t, scale)));
+
   //  x = x0 + (x1 - x0) * t / scale
   return eval_add(x0, eval_div(eval_sub(x1, x0), scale, t));
 }

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-typedef int64_t eval_integer_t;
+typedef long long eval_integer_t;
 
 #define EVAL_MAX INT64_MAX
 #define EVAL_MIN -INT64_MAX
