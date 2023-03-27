@@ -98,10 +98,7 @@ eval_integer_t eval_log10_2(eval_integer_t scale) {
   return eval_div(EVAL_LOG10_2, EVAL_SCALE, scale);
 }
 
-/*  BASIC FUNCTIONS
- *
- *  Trigonometric and logarithmic functions defined by arrays with
- *  function values.
+/*  1.  Fetching values from arrays.
  */
 
 static eval_integer_t eval_sqrt_fetch(eval_integer_t n) {
@@ -210,6 +207,9 @@ static eval_integer_t eval_atan_fetch_sym(eval_integer_t n) {
   return n < 0 ? -eval_data_atan[-n] : eval_data_atan[n];
 }
 
+/*  2.  Interpolation between values from arrays.
+ */
+
 #define INTERPOLATE_(fetch_, x_, x_range_, z_)   \
   do {                                           \
     eval_integer_t n0, n1, x0, x1;               \
@@ -284,6 +284,9 @@ static eval_integer_t eval_exp_n10_10(eval_integer_t x,
   return z;
 }
 
+/*  3.  Basic low precision functions.
+ */
+
 static eval_integer_t eval_sqrt_lowp(eval_integer_t x,
                                      eval_integer_t scale) {
   eval_integer_t x_range = EVAL_SQRT_RANGE;
@@ -311,112 +314,240 @@ static eval_integer_t eval_sqrt_lowp(eval_integer_t x,
   return z;
 }
 
-eval_integer_t eval_sqrt(eval_integer_t x, eval_integer_t scale) {
-  eval_integer_t upscale = eval_imul(scale, EVAL_UPSCALE);
-  eval_integer_t z;
-  z = eval_sqrt_lowp(eval_imul(x, EVAL_UPSCALE), upscale);
-  z = eval_idiv(z, EVAL_UPSCALE);
-  return z;
-}
-
-eval_integer_t eval_log(eval_integer_t x, eval_integer_t scale) {
+static eval_integer_t eval_log_lowp(eval_integer_t x,
+                                    eval_integer_t scale) {
   /*  FIXME
    */
   (void) eval_log_0_10;
   return 0;
 }
 
-eval_integer_t eval_log2(eval_integer_t x, eval_integer_t scale) {
+static eval_integer_t eval_log2_lowp(eval_integer_t x,
+                                     eval_integer_t scale) {
   /*  FIXME
    */
   (void) eval_log2_0_10;
   return 0;
 }
 
-eval_integer_t eval_log10(eval_integer_t x, eval_integer_t scale) {
+static eval_integer_t eval_log10_lowp(eval_integer_t x,
+                                      eval_integer_t scale) {
   /*  FIXME
    */
   (void) eval_log10_0_100;
   return 0;
 }
 
-eval_integer_t eval_exp(eval_integer_t x, eval_integer_t scale) {
+static eval_integer_t eval_exp_lowp(eval_integer_t x,
+                                    eval_integer_t scale) {
   /*  FIXME
    */
   (void) eval_exp_n10_10;
   return 0;
 }
 
-eval_integer_t eval_sin(eval_integer_t x, eval_integer_t scale) {
+static eval_integer_t eval_sin_lowp(eval_integer_t x,
+                                    eval_integer_t scale,
+                                    eval_integer_t scale_result) {
   eval_integer_t x_range = EVAL_SIN_RANGE;
   eval_integer_t z;
   INTERPOLATE_(eval_sin_fetch_wrapped, x, x_range, z);
-  return eval_div(z, EVAL_SCALE, scale);
+  return eval_div(z, EVAL_SCALE, scale_result);
 }
 
-eval_integer_t eval_tan(eval_integer_t x, eval_integer_t scale) {
+static eval_integer_t eval_tan_lowp(eval_integer_t x,
+                                    eval_integer_t scale,
+                                    eval_integer_t scale_result) {
   eval_integer_t x_range = EVAL_TAN_RANGE;
   eval_integer_t z;
   INTERPOLATE_(eval_tan_fetch_wrapped, x, x_range, z);
-  return eval_div(z, EVAL_SCALE, scale);
+  return eval_div(z, EVAL_SCALE, scale_result);
 }
 
-eval_integer_t eval_asin(eval_integer_t x, eval_integer_t scale) {
+static eval_integer_t eval_asin_lowp(eval_integer_t x,
+                                     eval_integer_t scale,
+                                     eval_integer_t scale_result) {
   eval_integer_t x_range = EVAL_ASIN_RANGE;
   eval_integer_t z;
   INTERPOLATE_(eval_asin_fetch_sym, x, x_range, z);
-  return eval_div(z, EVAL_SCALE, scale);
+  return eval_div(z, EVAL_SCALE, scale_result);
 }
 
-eval_integer_t eval_atan(eval_integer_t x, eval_integer_t scale) {
+static eval_integer_t eval_atan_lowp(eval_integer_t x,
+                                     eval_integer_t scale,
+                                     eval_integer_t scale_result) {
   eval_integer_t x_range = EVAL_ATAN_RANGE;
   eval_integer_t z;
   INTERPOLATE_(eval_atan_fetch_sym, x, x_range, z);
-  return eval_div(z, EVAL_SCALE, scale);
+  return eval_div(z, EVAL_SCALE, scale_result);
 }
 
-/*  COMPOUND FUNCTIONS
- *
- *  Functions defined by compositions of basic functions and
- *  arithmetic operations.
+/*  4.  Functions defined by compositions of basic functions and
+ *      arithmetic operations.
  */
+
+static eval_integer_t eval_pow_lowp(eval_integer_t x,
+                                    eval_integer_t y,
+                                    eval_integer_t scale) {
+  //  x^y = (e^(ln x))^y = e^(y ln x)
+  return eval_exp_lowp(eval_mul(eval_log_lowp(x, scale), y, scale),
+                       scale);
+}
+
+static eval_integer_t eval_cos_lowp(eval_integer_t x,
+                                    eval_integer_t scale,
+                                    eval_integer_t scale_result) {
+  //  cos(x) = sin(x + pi/2)
+  return eval_sin_lowp(eval_add(x, eval_pi_2(scale)), scale,
+                       scale_result);
+}
+
+static eval_integer_t eval_acos_lowp(eval_integer_t x,
+                                     eval_integer_t scale) {
+  //  acos(x) = pi/2 + asin(-x)
+  return eval_add(eval_pi_2(scale),
+                  eval_asin_lowp(eval_neg(x), scale, scale));
+}
+
+static eval_integer_t eval_atan2_lowp(eval_integer_t y,
+                                      eval_integer_t x,
+                                      eval_integer_t scale,
+                                      eval_integer_t scale_result) {
+  if (x > 0)
+    //  atan(y / x)
+    return eval_atan_lowp(eval_div(y, x, scale), scale, scale_result);
+  else if (x < 0) {
+    if (y >= 0)
+      //  atan(y / x) + pi
+      return eval_add(
+          eval_atan_lowp(eval_div(y, x, scale), scale, scale_result),
+          eval_pi(scale_result));
+    else
+      //  atan(y / x) - pi
+      return eval_sub(
+          eval_atan_lowp(eval_div(y, x, scale), scale, scale_result),
+          eval_pi(scale_result));
+  } else if (y > 0)
+    //  pi / 2
+    return eval_pi_2(scale_result);
+  else if (y < 0)
+    //  -pi / 2
+    return -eval_pi_2(scale_result);
+  //  undefined
+  return 0;
+}
+
+/*  5.  Upscaling low precision functions to get higher precision.
+ */
+
+#define UPSCALE_(func_, x_, scale_, z_)                           \
+  do {                                                            \
+    if (scale_ >= (EVAL_SCALE / EVAL_UPSCALE))                    \
+      z_ = func_(x_, scale_);                                     \
+    else {                                                        \
+      eval_integer_t upscale = eval_imul((scale_), EVAL_UPSCALE); \
+      z_ = func_(eval_imul((x_), EVAL_UPSCALE), upscale);         \
+      z_ = eval_idiv((z_), EVAL_UPSCALE);                         \
+    }                                                             \
+  } while (0)
+
+#define UPSCALE2_(func_, x_, scale_, z_)                            \
+  do {                                                              \
+    if ((scale_) >= (EVAL_SCALE / EVAL_UPSCALE))                    \
+      z_ = func_((x_), (scale_), (scale_));                         \
+    else {                                                          \
+      eval_integer_t upscale = eval_imul((scale_), EVAL_UPSCALE);   \
+      z_ = func_(eval_imul((x_), EVAL_UPSCALE), upscale, (scale_)); \
+    }                                                               \
+  } while (0)
+
+eval_integer_t eval_sqrt(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE_(eval_sqrt_lowp, x, scale, z);
+  return z;
+}
+
+eval_integer_t eval_log(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE_(eval_log_lowp, x, scale, z);
+  return z;
+}
+
+eval_integer_t eval_log2(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE_(eval_log2_lowp, x, scale, z);
+  return z;
+}
+
+eval_integer_t eval_log10(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE_(eval_log10_lowp, x, scale, z);
+  return z;
+}
+
+eval_integer_t eval_exp(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE_(eval_exp_lowp, x, scale, z);
+  return z;
+}
+
+eval_integer_t eval_sin(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE2_(eval_sin_lowp, x, scale, z);
+  return z;
+}
+
+eval_integer_t eval_tan(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE2_(eval_tan_lowp, x, scale, z);
+  return z;
+}
+
+eval_integer_t eval_asin(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE2_(eval_asin_lowp, x, scale, z);
+  return z;
+}
+
+eval_integer_t eval_atan(eval_integer_t x, eval_integer_t scale) {
+  eval_integer_t z;
+  UPSCALE2_(eval_atan_lowp, x, scale, z);
+  return z;
+}
 
 eval_integer_t eval_pow(eval_integer_t x, eval_integer_t y,
                         eval_integer_t scale) {
-  //  x^y = (e^(ln x))^y = e^(y ln x)
-  return eval_exp(eval_mul(eval_log(x, scale), y, scale), scale);
+  if (scale >= EVAL_SCALE / EVAL_UPSCALE)
+    return eval_pow_lowp(x, y, scale);
+
+  eval_integer_t z;
+  eval_integer_t upscale = eval_imul(scale, EVAL_UPSCALE);
+  z                      = eval_pow_lowp(eval_imul(x, EVAL_UPSCALE),
+                                         eval_imul(y, EVAL_UPSCALE), upscale);
+  z                      = eval_idiv(z, EVAL_UPSCALE);
+  return z;
 }
 
 eval_integer_t eval_cos(eval_integer_t x, eval_integer_t scale) {
-  //  cos(x) = sin(x + pi/2)
-  return eval_sin(eval_add(x, eval_pi_2(scale)), scale);
+  eval_integer_t z;
+  UPSCALE2_(eval_cos_lowp, x, scale, z);
+  return z;
 }
 
 eval_integer_t eval_acos(eval_integer_t x, eval_integer_t scale) {
-  //  acos(x) = pi/2 + asin(-x)
-  return eval_add(eval_pi_2(scale), eval_asin(eval_neg(x), scale));
+  eval_integer_t z;
+  UPSCALE_(eval_acos_lowp, x, scale, z);
+  return z;
 }
 
 eval_integer_t eval_atan2(eval_integer_t y, eval_integer_t x,
                           eval_integer_t scale) {
-  if (x > 0)
-    //  atan(y / x)
-    return eval_atan(eval_div(y, x, scale), scale);
-  else if (x < 0) {
-    if (y >= 0)
-      //  atan(y / x) + pi
-      return eval_add(eval_atan(eval_div(y, x, scale), scale),
-                      eval_pi(scale));
-    else
-      //  atan(y / x) - pi
-      return eval_sub(eval_atan(eval_div(y, x, scale), scale),
-                      eval_pi(scale));
-  } else if (y > 0)
-    //  pi / 2
-    return eval_pi_2(scale);
-  else if (y < 0)
-    //  -pi / 2
-    return -eval_pi_2(scale);
-  //  undefined
-  return 0;
+  if (scale >= EVAL_SCALE / EVAL_UPSCALE)
+    return eval_atan2_lowp(y, x, scale, scale);
+
+  eval_integer_t z;
+  eval_integer_t upscale = eval_imul(scale, EVAL_UPSCALE);
+  z                      = eval_atan2_lowp(eval_imul(y, EVAL_UPSCALE),
+                                           eval_imul(x, EVAL_UPSCALE), upscale, scale);
+  return z;
 }
